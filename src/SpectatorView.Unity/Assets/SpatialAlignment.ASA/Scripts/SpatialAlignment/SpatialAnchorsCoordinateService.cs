@@ -10,6 +10,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+#if UNITY_WSA
+using UnityEngine.XR.WSA;
+#endif
 
 namespace Microsoft.MixedReality.SpatialAlignment
 {
@@ -150,10 +153,15 @@ namespace Microsoft.MixedReality.SpatialAlignment
         /// <returns>The newly created <see cref="GameObject"/>.</returns>
         protected virtual GameObject CreateGameObjectFrom(AnchorLocatedEventArgs args)
         {
-            Pose pose = args.Anchor.GetAnchorPose();
+            Pose pose = args.Anchor.GetPose();
             Debug.Log($"ASA-Android: Creating an anchor at: {pose.position.ToString("G4")}, {pose.rotation.eulerAngles.ToString("G2")}");
             GameObject gameObject = SpawnGameObject(pose.position, pose.rotation);
-            gameObject.AddARAnchor();
+
+#if UNITY_ANDROID || UNITY_IOS
+            gameObject.AddComponent<CloudNativeAnchor>();
+#elif UNITY_WSA
+            gameObject.AddComponent<WorldAnchor>();
+#endif
             return gameObject;
         }
 
@@ -305,14 +313,18 @@ namespace Microsoft.MixedReality.SpatialAlignment
                 GameObject spawnedAnchorObject = SpawnGameObject(worldPosition, worldRotation);
                 try
                 {
-                    spawnedAnchorObject.AddARAnchor();
+                    #if UNITY_ANDROID || UNITY_IOS
+                    var anchor = spawnedAnchorObject.AddComponent<CloudNativeAnchor>();
+#elif UNITY_WSA
+                    var anchor = spawnedAnchorObject.AddComponent<WorldAnchor>();
+#endif
 
                     // Let a frame pass to ensure any AR anchor is properly attached (WorldAnchors used to have issues with this)
                     await Task.Delay(100, cancellationToken);
 
                     CloudSpatialAnchor cloudSpatialAnchor = new CloudSpatialAnchor()
                     {
-                        LocalAnchor = spawnedAnchorObject.GetNativeAnchorPointer(),
+                        LocalAnchor = anchor.GetNativeSpatialAnchorPtr(),
                         Expiration = DateTime.Now.AddDays(1)
                     };
 
