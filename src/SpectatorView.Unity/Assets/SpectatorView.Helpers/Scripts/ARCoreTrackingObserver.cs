@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using UnityEngine;
+using UnityEngine.XR.ARFoundation;
 
 namespace Microsoft.MixedReality.SpectatorView
 {
@@ -10,13 +11,21 @@ namespace Microsoft.MixedReality.SpectatorView
     /// </summary>
     public class ARCoreTrackingObserver : TrackingObserver
     {
+        private ARSession ARSession;
+
+        private void Start()
+        {
+            ARSession = FindObjectOfType<ARSession>();
+        }
+
         /// <inheritdoc/>
         public override TrackingState TrackingState
         {
             get
             {
 #if UNITY_ANDROID
-                if (GoogleARCore.Session.Status == GoogleARCore.SessionStatus.Tracking)
+
+                if (ARSession.subsystem.trackingState == UnityEngine.XR.ARSubsystems.TrackingState.Tracking)
                 {
                     return TrackingState.Tracking;
                 }
